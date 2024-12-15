@@ -1,0 +1,320 @@
+---
+title: "hackathon_2024"
+author: "Ainhoa López, Laura Llorente, Luis "
+date: "2024-12-13"
+output: html_document
+---
+
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(broom)
+library(ggplot2)
+library(caret)
+library(patchwork)
+```
+
+
+```{r}
+file_path <- "pulmonar_data_marato.xlsx"  
+data <- read_excel(file_path)
+colnames(data) <- make.names(colnames(data), unique = TRUE)
+
+colnames(data)
+head(data)
+```
+
+```{r}
+outcome_vars <- c("Progressive.disease", "Necessity.of.transplantation", "Death")
+
+exclude_vars <- c("ProgressiveDisease", "Detail", "Extras.AP", "Extra", 
+                  "Diagnosis.after.biopsy", "Mutation.Type", "NHC", "NCH", "Pacient", "Blood", "Biopsy")
+
+data <- data %>%
+  mutate(across(all_of(outcome_vars), ~ as.numeric(as.factor(.)) - 1)) # Convert to 0/1
+
+predictors <- setdiff(names(data), c(outcome_vars, exclude_vars))
+
+```
+
+```{r}
+results <- data.frame(
+  Outcome = character(),
+  Predictor = character(),
+  Coefficient = numeric(),
+  PValue = numeric()
+)
+
+for (outcome in outcome_vars) {
+  for (predictor in predictors) {
+    formula <- as.formula(paste(outcome, "~", predictor))
+    
+    if (length(unique(data[[predictor]])) <= 1) next
+
+    model <- tryCatch(
+      glm(formula, data = data, family = binomial),
+      error = function(e) NULL
+    )
+
+    if (!is.null(model)) {
+      summary_model <- summary(model)
+
+      if (nrow(summary_model$coefficients) >= 2) {
+        coeff <- summary_model$coefficients[2, 1] 
+        pval <- summary_model$coefficients[2, 4] 
+        
+        results <- rbind(results, data.frame(
+          Outcome = outcome,
+          Predictor = predictor,
+          Coefficient = coeff,
+          PValue = pval
+        ))
+      }
+    }
+  }
+}
+
+significant_results <- results %>% filter(PValue < 0.05)
+
+head(significant_results)
+```
+
+```{r}
+if (nrow(significant_results) > 0) {
+  ggplot(significant_results, aes(x = Predictor, y = Coefficient, fill = Outcome)) +
+    geom_bar(stat = "identity", position = position_dodge()) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    labs(title = "Significant Predictors by Outcome", y = "Coefficient", x = "Predictor")
+} else {
+  print("No significant predictors found.")
+}
+```
+
+```{r}
+significant_results %>%
+  arrange(PValue) %>%
+  knitr::kable(caption = "Table of Significant Predictors")
+```
+
+```{r}
+results <- data.frame(
+  Outcome = character(),
+  Predictor = character(),
+  Coefficient = numeric(),
+  PValue = numeric(),
+  Accuracy = numeric(),
+  Sensitivity = numeric(),
+  Specificity = numeric(),
+  stringsAsFactors = FALSE
+)
+
+for (outcome in outcome_vars) {
+  for (predictor in predictors) {
+    formula <- as.formula(paste(outcome, "~", predictor))
+    
+    if (length(unique(data[[predictor]])) <= 1) next
+
+    model <- tryCatch(
+      glm(formula, data = data, family = binomial),
+      error = function(e) NULL
+    )
+
+    if (!is.null(model)) {
+      predicted_probs <- predict(model, type = "response")
+      
+      predicted_classes <- ifelse(predicted_probs > 0.5, 1, 0)
+
+      actual_classes <- data[[outcome]]
+      
+
+      predicted_classes <- predicted_classes[!is.na(actual_classes)]
+      actual_classes <- na.omit(actual_classes)
+      
+      if (length(predicted_classes) == length(actual_classes)) {
+        cm <- confusionMatrix(as.factor(predicted_classes), as.factor(actual_classes))
+        
+        accuracy <- cm$overall['Accuracy']
+        sensitivity <- cm$byClass['Sensitivity']
+        specificity <- cm$byClass['Specificity']
+        
+        summary_model <- summary(model)
+        if (nrow(summary_model$coefficients) >= 2) {
+          coeff <- summary_model$coefficients[2, 1] 
+          pval <- summary_model$coefficients[2, 4]
+          
+
+          results <- rbind(results, data.frame(
+            Outcome = outcome,
+            Predictor = predictor,
+            Coefficient = coeff,
+            PValue = pval,
+            Accuracy = accuracy,
+            Sensitivity = sensitivity,
+            Specificity = specificity
+          ))
+        }
+      } else {
+        message("Length mismatch for outcome: ", outcome, " and predictor: ", predictor)
+      }
+    }
+  }
+}
+
+
+significant_results <- results %>% filter(PValue < 0.05)
+
+
+overall_accuracy <- mean(results$Accuracy, na.rm = TRUE)
+
+
+significant_results
+print(paste("The overall accuracy is:", overall_accuracy))
+
+
+
+overall_accuracy_each <- significant_results %>% 
+  group_by(Outcome) %>% summarise(Overall_Accuracy = mean(Accuracy, na.rm = TRUE)) 
+
+overall_accuracy_each
+
+```
+
+
+
+
+
+
+
+```{r}
+#1. Histograma de Coeficientes Significativos--> en otras palabras, la cantidad de efecto que tiene cada variable independientes
+ggplot(significant_results, aes(x = reorder(Predictor, Coefficient), y = Coefficient)) +
+  geom_bar(stat = "identity", fill = "skyblue", color = "black") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +  # Inclina etiquetas para legibilidad
+  labs(
+    title = "Distribución de los Coeficientes Significativos",
+    x = "Predictor",
+    y = "Coeficiente"
+  )
+
+
+#2. Diagrama de Dispersión: Coeficientes vs. Valores P --> ver la relacion entre los coeficientes y los valores p
+#podemos ver una tendencia en algunos predictores extremadamente signficativos a tener una asociacion positiva en el modelo
+ggplot(significant_results, aes(x = PValue, y = Coefficient)) +
+  geom_point(color = "darkred") +
+  theme_minimal() +
+  labs(
+    title = "Coeficientes vs Valores P",
+    x = "Valor P",
+    y = "Coeficiente"
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "blue")
+
+
+#3. Mapa de Calor: Precisión por Outcome y Predictor
+ggplot(significant_results, aes(x = Predictor, y = Outcome, fill = Accuracy)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "red", high = "green") +
+  theme_minimal() +
+  labs(
+    title = "Precisión por Predictor y Outcome",
+    x = "Predictor",
+    y = "Outcome"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+#4 segundo mapa de calor, pero referente a p-value
+ggplot(significant_results, aes(x = Predictor, y = Outcome, fill = -log10(PValue))) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "red", name = "-log10(P)") +
+  theme_minimal() +
+  labs(
+    title = "Significancia de Predictores por Outcome",
+    x = "Predictor",
+    y = "Outcome"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+#5. Barras Apiladas: Sensibilidad y Especificidad por Outcome
+long_results <- significant_results %>%
+  pivot_longer(cols = c(Sensitivity, Specificity), names_to = "Metric", values_to = "Value")
+
+ggplot(long_results, aes(x = Outcome, y = Value, fill = Metric)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  labs(
+    title = "Sensibilidad y Especificidad por Outcome",
+    x = "Outcome",
+    y = "Valor",
+    fill = "Métrica"
+  )
+
+
+
+#6 Boxplot de Precisión por Outcome
+ggplot(significant_results, aes(x = Outcome, y = Accuracy)) +
+  geom_boxplot(fill = "lightblue") +
+  theme_minimal() +
+  labs(
+    title = "Distribución de Precisión por Outcome",
+    x = "Outcome",
+    y = "Precisión"
+  )
+
+
+
+
+```
+
+
+
+```{r}
+
+#predecir valores de FVC Y DLCO a dos años vista 
+
+library(dplyr)
+
+file_path <- "pulmonar_data_marato.xlsx"  
+data <- read_excel(file_path)
+colnames(data)[colnames(data) == "FVC (%) 1 year after diagnosis"] <- "FVC_1_year"
+colnames(data)[colnames(data) == "DLCO (%) 1 year after diagnosis"] <- "DLCO_1_year"
+colnames(data)[colnames(data) == "FVC (%) at diagnosis"] <- "FVC_at_diagnosis"
+colnames(data)[colnames(data) == "DLCO (%) at diagnosis"] <- "DLCO_at_diagnosis"
+
+
+data <- data %>%
+  filter(!is.na(FVC_at_diagnosis) & !is.na(DLCO_at_diagnosis) & 
+         !is.na(FVC_1_year) & !is.na(DLCO_1_year))
+
+
+data$FVC_at_diagnosis <- as.numeric(data$FVC_at_diagnosis)
+data$DLCO_at_diagnosis <- as.numeric(data$DLCO_at_diagnosis)
+data$FVC_1_year <- as.numeric(data$FVC_1_year)
+data$DLCO_1_year <- as.numeric(data$DLCO_1_year)
+
+
+model_FVC_2_year <- lm(FVC_1_year ~ FVC_at_diagnosis + DLCO_at_diagnosis, data = data)
+
+
+model_DLCO_2_year <- lm(DLCO_1_year ~ FVC_at_diagnosis + DLCO_at_diagnosis, data = data)
+
+
+summary(model_FVC_2_year)
+summary(model_DLCO_2_year)
+
+
+data$Pred_FVC_2_year <- predict(model_FVC_2_year, newdata = data)
+data$Pred_DLCO_2_year <- predict(model_DLCO_2_year, newdata = data)
+
+
+head(data)
+
+data$Pred_FVC_2_year
+data$Pred_DLCO_2_year
+
+```
