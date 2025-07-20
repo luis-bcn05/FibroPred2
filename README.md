@@ -1,107 +1,88 @@
-# FibroPred2
-🧬 Hackathon 2024 — Predictive Modeling in Pulmonary Disease
+# 🫁 FibroPred2 — Predictive Modeling in Pulmonary Disease
 
-Date: December 13, 2024
-Authors: Ainhoa López, Laura Llorente, Luis Carlos Ospina Restrepo
-Language: R / RMarkdown
-File: hackathon_2024.Rmd
-🔍 Project Overview
+> 🧠 Hackathon 2024 | Biomedical Data Science with R  
+> 📅 Date: December 13, 2024  
+> 👩‍💻 Authors: Ainhoa López, Laura Llorente, Luis Carlos Ospina Restrepo  
+> 📄 File: `hackathon_2024.Rmd` | Language: R / R Markdown
 
-This project was developed for a biomedical hackathon focused on predicting clinical outcomes in pulmonary diseases. Using a real anonymized dataset from a hospital cohort, we analyzed potential predictors of disease progression, need for transplantation, and mortality. The analysis included logistic regression, statistical inference, model performance evaluation, and predictive modeling of lung function metrics.
-📂 Data
+---
 
-The dataset (pulmonar_data_marato.xlsx) includes:
+## 📌 Overview
 
-    Clinical variables (e.g., biopsy markers, blood levels, diagnostics)
+This project was developed for a biomedical hackathon focused on predicting clinical outcomes in pulmonary disease.
 
-    Outcome variables:
+Using a real anonymized hospital dataset, we explored predictors of:
 
-        Progressive.disease
+- Disease progression
+- Transplantation necessity
+- Mortality risk
 
-        Necessity.of.transplantation
+We applied logistic regression, performance evaluation metrics, and built predictive models for pulmonary function evolution (FVC and DLCO).
 
-        Death
+---
 
-    Pulmonary function variables:
+## 📁 Dataset
 
-        FVC (%) and DLCO (%) at diagnosis and 1 year after
+**File:** `pulmonar_data_marato.xlsx`  
+The dataset includes:
 
-⚙️ Methods
+- **Clinical variables:** biopsy markers, blood levels, diagnostics  
+- **Outcome variables:**  
+  - `Progressive.disease`  
+  - `Necessity.of.transplantation`  
+  - `Death`  
+- **Pulmonary function:**  
+  - `FVC (%)` and `DLCO (%)` at diagnosis and 1 year later
 
-    Logistic Regression for binary outcome prediction
+---
 
-    Variable Significance Filtering via p-values (< 0.05)
+## ⚙️ Methods
 
-    Performance Metrics:
+- 🧮 **Logistic regression** for binary classification  
+- 🎯 **Significance filtering** (`p < 0.05`)  
+- 📊 **Performance metrics:**
+  - Accuracy
+  - Sensitivity
+  - Specificity
 
-        Accuracy
+- 📈 **Visualization techniques:**
+  - Barplots of coefficients
+  - Heatmaps (accuracy and significance)
+  - Boxplots
+  - Sensitivity/specificity stacked bars
+  - Coefficient vs P-value scatter plots
 
-        Sensitivity
+- 📉 **Linear regression models** to predict FVC and DLCO at 1 year from diagnostic baseline
 
-        Specificity
+---
 
-    Visualizations:
+## 🔍 Key Outputs
 
-        Barplots of coefficients
+- A table of **significant predictors** across outcomes  
+- Visualizations that highlight variable relevance  
+- Regression models predicting future pulmonary function
 
-        Heatmaps of accuracy and p-values
+---
 
-        Boxplots and stacked bars for metrics across outcomes
+## 🧰 Tools & Libraries
 
-    Predictive Modeling:
+- `tidyverse` (dplyr, tidyr, ggplot2)  
+- `readxl`, `caret`, `broom`, `patchwork`  
+- `knitr` for report generation
 
-        Linear regression to predict FVC and DLCO 1 year after diagnosis based on initial values
+---
 
-📊 Key Outputs
+## 📎 How to Use
 
-    Identification of significant predictors associated with poor outcomes.
+1. Clone the repository  
+2. Add `pulmonar_data_marato.xlsx` to your working directory  
+3. Open `hackathon_2024.Rmd` in **RStudio**  
+4. Click **Knit → HTML** to generate the report
 
-    Accuracy stratified by outcome and predictor.
+---
 
-    Predictive models for future FVC and DLCO using initial diagnostics.
+## 📬 Contact
 
-📈 Visualizations
+If you have questions, feel free to reach out via [LinkedIn](https://www.linkedin.com/in/luisbcn05) or check out more projects on [GitHub](https://github.com/luiss827).
 
-The project includes the following plots:
-
-    Coefficient distributions
-
-    P-value vs Coefficient scatter plot
-
-    Heatmaps of accuracy and statistical significance
-
-    Sensitivity/Specificity by outcome
-
-    Boxplots of accuracy distribution
-
-🧪 Tools & Packages
-
-This analysis was conducted in R, using:
-
-    dplyr, tidyr, broom, ggplot2, caret, patchwork
-
-    readxl for Excel import
-
-    knitr for rendering
-
-📁 Output
-
-    Interactive HTML report generated with R Markdown
-
-    Summary table of significant predictors
-
-    Plots illustrating model insights
-
-    Predicted values of FVC and DLCO at one-year follow-up
-
-📌 How to Run
-
-    Place pulmonar_data_marato.xlsx in your project folder.
-
-    Open hackathon_2024.Rmd in RStudio.
-
-    Knit to HTML.
-
-🤝 Acknowledgments
-
-This project was built as part of a student hackathon to apply real-world data science to biomedical challenges.
+---
